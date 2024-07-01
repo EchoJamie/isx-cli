@@ -20,7 +20,7 @@ func init() {
 
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
-	Short: printCommand("isx upgrade", 65) + "| 更新isx-cli",
+	Short: printCommand("isx upgrade", 65) + "| 升级isx-cli脚手架",
 	Long:  `isx upgrade`,
 	Run: func(cmd *cobra.Command, args []string) {
 		upgradeCmdMain()
@@ -49,39 +49,16 @@ func contains(slice []string, item string) bool {
 
 func upgradeCmdMain() {
 
-	// 获取当前版本中的版本号
-	oldVersion := viper.GetString("version.number")
-
 	// 判断是否有至匠云模块，没有则直接添加
 	projectList := viper.GetStringSlice("project-list")
-	if !contains(projectList, "tools-yun") {
-		projectList = append(projectList, "tools-yun")
-		viper.Set("project-list", projectList)
-		toolsYun := Project{
-			Name:     "tools-yun",
-			Describe: "至匠云，导航中心",
-			Dir:      "",
-			Repository: struct {
-				URL      string `json:"url"`
-				Download string `json:"download"`
-			}{
-				URL:      "https://github.com/isxcode/tools-yun.git",
-				Download: "no",
-			},
-			SubRepository: []string{},
-		}
-		viper.Set("tools-yun", toolsYun)
-		viper.WriteConfig()
-	}
 
 	// 获取github中的版本号
 	if !contains(projectList, "pytorch-yun") {
 
 		// 在这次更新中,顺带更新项目描述
-		viper.Set("flink-yun.describe", "至流云 - 流数据管理平台")
-		viper.Set("spark-yun.describe", "至轻云 - 超轻量级大数据平台")
-		viper.Set("isx-cli.describe", "至行   - 组织开发专用工具")
-		viper.Set("tools-yun.describe", "至匠云 - 企业产品工具导航平台")
+		viper.Set("flink-yun.describe", "至流云-打造流数据分析平台")
+		viper.Set("spark-yun.describe", "至轻云-打造大数据计算平台")
+		viper.Set("isx-cli.describe", "至行云-打造开发规范脚手架")
 
 		// 项目
 		projectList = append(projectList, "pytorch-yun")
@@ -94,7 +71,7 @@ func upgradeCmdMain() {
 		if !os.IsNotExist(err) {
 			pytorchYunStr := "pytorch-yun:\n" +
 				"    name: pytorch-yun\n" +
-				"    describe: 至慧云 - AI训练部署平台\n" +
+				"    describe: 至慧云-打造智能微模型平台\n" +
 				"    dir: \n" +
 				"    repository:\n" +
 				"        url: https://github.com/isxcode/pytorch-yun.git\n" +
@@ -159,27 +136,20 @@ func upgradeCmdMain() {
 		os.Exit(1)
 	}
 
-	// 版本号进行对比
-	if oldVersion < latestVersion {
-
-		// 执行更新命令
-		executeCommand := "sh -c \"$(curl -fsSL https://raw.githubusercontent.com/isxcode/isx-cli/main/install.sh)\""
-		result := exec.Command("bash", "-c", executeCommand)
-		result.Stdout = os.Stdout
-		result.Stderr = os.Stderr
-
-		err := result.Run()
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			fmt.Println("已更新到最新版本：" + latestVersion)
-		}
-
-		// 更新配置中的版本信息
-		viper.Set("version.number", latestVersion)
-		viper.WriteConfig()
+	// 每次升级都直接重新下载安装
+	// 执行更新命令
+	executeCommand := "sh -c \"$(curl -fsSL https://raw.githubusercontent.com/isxcode/isx-cli/main/install.sh)\""
+	result := exec.Command("bash", "-c", executeCommand)
+	result.Stdout = os.Stdout
+	result.Stderr = os.Stderr
+	err = result.Run()
+	if err != nil {
+		log.Fatal(err)
 	} else {
-		fmt.Println("已经是最新版本")
-		os.Exit(1)
+		fmt.Println("已更新到最新版本：" + latestVersion)
 	}
+
+	// 更新配置中的版本信息
+	viper.Set("version.number", latestVersion)
+	viper.WriteConfig()
 }

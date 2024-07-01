@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func init() {
@@ -15,8 +16,8 @@ func init() {
 
 var buildCmd = &cobra.Command{
 	Use:   "build",
-	Short: printCommand("isx build", 65) + "| 编译项目代码，大约需要10分钟",
-	Long:  `isx build`,
+	Short: printCommand("isx build", 65) + "| 使用docker编译项目代码",
+	Long:  `isx build,大约需要10分钟,需要docker环境`,
 	Run: func(cmd *cobra.Command, args []string) {
 		buildCmdMain()
 	},
@@ -33,6 +34,7 @@ func buildCmdMain() {
 	cacheGradleDir := viper.GetString("cache.gradle.dir")
 	if cacheGradleDir == "" {
 		cacheGradleDir = home + "/.gradle"
+		cacheGradleDir = strings.ReplaceAll(cacheGradleDir, "\\", "/")
 		viper.Set("cache.gradle.dir", cacheGradleDir)
 		viper.WriteConfig()
 	}
@@ -49,6 +51,7 @@ func buildCmdMain() {
 	cachePnpmDir := viper.GetString("cache.pnpm.dir")
 	if cachePnpmDir == "" {
 		cachePnpmDir = home + "/.pnpm-store"
+		cachePnpmDir = strings.ReplaceAll(cachePnpmDir, "\\", "/")
 		viper.Set("cache.pnpm.dir", cachePnpmDir)
 		viper.WriteConfig()
 	}

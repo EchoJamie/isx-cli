@@ -74,6 +74,7 @@ func inputProjectPath() {
 	if strings.HasPrefix(projectPath, "~/") {
 		projectPath = strings.Replace(projectPath, "~", common.HomeDir(), 1)
 	}
+	projectPath = strings.ReplaceAll(projectPath, "\\", "/")
 
 	// 目录不存在则报错
 	_, err := os.Stat(projectPath)

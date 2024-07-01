@@ -8,23 +8,22 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 )
 
 func init() {
-	rootCmd.AddCommand(gradleCmd)
+	rootCmd.AddCommand(packageCmd)
 }
 
-var gradleCmd = &cobra.Command{
-	Use:   "gradle",
-	Short: printCommand("isx gradle <gradle_command>", 65) + "| 项目内执行gradle命令",
-	Long:  `isx gradle install、isx gradle start、isx gradle clean、isx gradle format`,
+var packageCmd = &cobra.Command{
+	Use:   "package",
+	Short: printCommand("isx package", 65) + "| 源码编译打包",
+	Long:  `isx package`,
 	Run: func(cmd *cobra.Command, args []string) {
-		gradleCmdMain(args)
+		packageCmdMain()
 	},
 }
 
-func gradleCmdMain(args []string) {
+func packageCmdMain() {
 
 	projectName := viper.GetString("current-project.name")
 	projectDir := viper.GetString(projectName + ".dir")
@@ -32,11 +31,10 @@ func gradleCmdMain(args []string) {
 
 	var gradleCmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		gradleCmd = exec.Command("bash", "-c", "./gradlew.bat "+strings.Join(args, " "))
+		gradleCmd = exec.Command("bash", "-c", "./gradlew.bat clean package")
 	} else {
-		gradleCmd = exec.Command("./gradlew", args...)
+		gradleCmd = exec.Command("./gradlew", "clean", "package")
 	}
-
 	gradleCmd.Stdout = os.Stdout
 	gradleCmd.Stderr = os.Stderr
 	gradleCmd.Dir = projectPath

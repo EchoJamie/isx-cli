@@ -25,7 +25,7 @@ func init() {
 
 var checkoutCmd = &cobra.Command{
 	Use:   "checkout",
-	Short: printCommand("isx checkout <issue_number>", 65) + "| 切出开发分支",
+	Short: printCommand("isx checkout <issue_number>", 65) + "| 切换开发分支",
 	Long:  `isx checkout 123`,
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -204,7 +204,7 @@ func createReleaseBranch(path string, branchName string, releaseName string) {
 
 func checkoutOriginBranch(path string, branchName string) {
 
-	executeCommand := "git fetch && git checkout --track origin/" + branchName
+	executeCommand := "git fetch origin && git checkout --track origin/" + branchName
 	checkoutCmd := exec.Command("bash", "-c", executeCommand)
 	checkoutCmd.Stdout = os.Stdout
 	checkoutCmd.Stderr = os.Stderr
