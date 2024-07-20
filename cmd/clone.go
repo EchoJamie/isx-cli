@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/isxcode/isx-cli/common"
+	"github.com/isxcode/isx-cli/github"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
@@ -31,7 +32,7 @@ var cloneCmd = &cobra.Command{
 func cloneCmdMain() {
 
 	// 判断用户是否登录
-	isLogin := common.CheckUserAccount(viper.GetString("user.token"))
+	isLogin := common.CheckUserAccount(common.GetToken())
 	if !isLogin {
 		fmt.Println("请先登录")
 		os.Exit(1)
@@ -105,7 +106,7 @@ func inputProjectPath() {
 func cloneCode(isxcodeRepository string, path string, name string, isMain bool) {
 
 	// 替换下载链接
-	isxcodeRepository = strings.Replace(isxcodeRepository, "https://", "https://"+viper.GetString("user.token")+"@", -1)
+	isxcodeRepository = strings.Replace(isxcodeRepository, "https://", "https://"+common.GetToken()+"@", -1)
 
 	// 下载主项目代码
 	executeCommand := "git clone -b main " + isxcodeRepository
@@ -155,13 +156,23 @@ func cloneProjectCode() {
 
 	// 下载主项目代码
 	mainRepository := viper.GetString(projectName + ".repository.url")
-	cloneCode(mainRepository, projectPath, projectName, true)
+	if !github.IsRepoForked(account, projectName) {
+		github.ForkRepository("isxcode", projectName, "")
+		cloneCode(mainRepository, projectPath, projectName, true)
+	} else {
+		cloneCode(mainRepository, projectPath, projectName, true)
+	}
 
 	// 下载子项目代码
 	var subRepository []Repository
 	viper.UnmarshalKey(projectName+".sub-repository", &subRepository)
 	for _, repository := range subRepository {
-		cloneCode(repository.Url, projectPath+"/"+projectName, repository.Name, false)
+		if !github.IsRepoForked(account, projectName) {
+			github.ForkRepository("isxcode", projectName, "")
+			cloneCode(repository.Url, projectPath+"/"+projectName, repository.Name, false)
+		} else {
+			cloneCode(repository.Url, projectPath+"/"+projectName, repository.Name, false)
+		}
 	}
 }
 
