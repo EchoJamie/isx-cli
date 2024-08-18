@@ -72,14 +72,17 @@ func inputProjectPath() {
 	var flag = ""
 	fmt.Scanln(&flag)
 	flag = strings.Trim(flag, " ")
-	for flag == "y" || flag == "n" {
-		if flag == "y" {
-			projectPath = currentWorkDir
-		}
-		if flag == "n" {
-			fmt.Print("请输入安装路径:")
-			fmt.Scanln(&projectPath)
-		}
+	flag = strings.ToUpper(flag)
+	if flag != "Y" && flag != "N" {
+		fmt.Println("输入值异常")
+		os.Exit(1)
+	}
+	if flag == "Y" {
+		projectPath = currentWorkDir
+	}
+	if flag == "N" {
+		fmt.Print("请输入安装路径:")
+		fmt.Scanln(&projectPath)
 	}
 
 	// 支持克隆路径替换～为当前用户目录
@@ -129,6 +132,7 @@ func cloneCode(isxcodeRepository string, path string, name string, isMain bool) 
 	// 将origin改为个人的
 	userRepository := strings.Replace(isxcodeRepository, "isxcode", viper.GetString("user.account"), -1)
 	updateOriginCommand := "git remote set-url origin " + userRepository + " && git fetch origin"
+	fmt.Println(updateOriginCommand)
 	updateOriginCmd := exec.Command("bash", "-c", updateOriginCommand)
 	updateOriginCmd.Stdout = os.Stdout
 	updateOriginCmd.Stderr = os.Stderr
@@ -137,6 +141,7 @@ func cloneCode(isxcodeRepository string, path string, name string, isMain bool) 
 
 	// 添加upstream仓库
 	addUpstreamCommand := "git remote add upstream " + isxcodeRepository + " && git fetch upstream"
+	fmt.Println(addUpstreamCommand)
 	addUpstreamCmd := exec.Command("bash", "-c", addUpstreamCommand)
 	addUpstreamCmd.Stdout = os.Stdout
 	addUpstreamCmd.Stderr = os.Stderr
@@ -145,6 +150,7 @@ func cloneCode(isxcodeRepository string, path string, name string, isMain bool) 
 
 	// main分支映射到isxcode仓库中
 	linkUpstreamCommand := "git branch --set-upstream-to=upstream/main main"
+	fmt.Println(linkUpstreamCommand)
 	linkUpstreamCmd := exec.Command("bash", "-c", linkUpstreamCommand)
 	linkUpstreamCmd.Stdout = os.Stdout
 	linkUpstreamCmd.Stderr = os.Stderr
@@ -156,7 +162,7 @@ func cloneProjectCode() {
 
 	// 下载主项目代码
 	mainRepository := viper.GetString(projectName + ".repository.url")
-	if !github.IsRepoForked(account, projectName) {
+	if !github.IsRepoForked(viper.GetString("user.account"), projectName) {
 		github.ForkRepository("isxcode", projectName, "")
 		cloneCode(mainRepository, projectPath, projectName, true)
 	} else {
@@ -167,9 +173,11 @@ func cloneProjectCode() {
 	var subRepository []Repository
 	viper.UnmarshalKey(projectName+".sub-repository", &subRepository)
 	for _, repository := range subRepository {
-		if !github.IsRepoForked(account, projectName) {
-			github.ForkRepository("isxcode", projectName, "")
-			cloneCode(repository.Url, projectPath+"/"+projectName, repository.Name, false)
+		if !github.IsRepoForked(viper.GetString("user.account"), repository.Name) {
+			forkRepository := github.ForkRepository("isxcode", repository.Name, "")
+			if forkRepository {
+				cloneCode(repository.Url, projectPath+"/"+projectName, repository.Name, false)
+			}
 		} else {
 			cloneCode(repository.Url, projectPath+"/"+projectName, repository.Name, false)
 		}

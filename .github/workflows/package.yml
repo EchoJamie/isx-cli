@@ -44,6 +44,9 @@ jobs:
       - name: isx_windows_amd64
         run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ./target/isx_windows_amd64.exe main.go
 
+      - name: isx_windows_arm64
+        run: CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -o ./target/isx_windows_arm64.exe main.go
+
       - name: isx_linux_amd64
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./target/isx_linux_amd64 main.go
 
@@ -52,6 +55,9 @@ jobs:
 
       - name: isx_darwin_amd64
         run: CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ./target/isx_darwin_amd64 main.go
+
+      - name: copy install.sh
+        run: cp install.sh target/install.sh
 
       - name: Upload Package to Ali oss
         uses: chf007/aliyun-oss-upload-action@main
