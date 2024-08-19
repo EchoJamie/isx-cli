@@ -11,3 +11,20 @@ type Repository struct {
 	Fork        bool   `json:"fork"`
 	Url         string `json:"url"`
 }
+
+type Issue struct {
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	Body   string `json:"body"`
+	State  string `json:"state"`
+
+	Labels []struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Color       string `json:"color"`
+	} `json:"labels"`
+}
+
+type Branch struct {
+	Name string `json:"name"`
+}

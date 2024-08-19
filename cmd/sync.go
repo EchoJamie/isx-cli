@@ -2,12 +2,11 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/isxcode/isx-cli/common"
+	"github.com/isxcode/isx-cli/github"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io"
 	"net/http"
 	"os"
 )
@@ -53,23 +52,12 @@ func SyncBranch(projectName, branchName string) {
 		Branch: branchName,
 	}
 
-	client := &http.Client{}
-	payload, err := json.Marshal(reqJson)
 	userName := viper.GetString("user.account")
-	req, err := http.NewRequest("POST", common.GithubApiReposDomain+"/"+userName+"/"+projectName+"/merge-upstream", bytes.NewBuffer(payload))
+	const SyncBranchURl = common.GithubApiReposDomain + "/%s/%s/merge-upstream"
 
-	req.Header = common.GitHubHeader(common.GetToken())
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("请求失败:", err)
-		os.Exit(1)
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Println("关闭响应体失败:", err)
-		}
-	}(resp.Body)
+	payload := common.ToJsonBytes(reqJson)
+	resp := github.Post(fmt.Sprintf(SyncBranchURl, userName, projectName), bytes.NewBuffer(payload))
+	defer github.CloseRespBody(resp.Body)
 
 	if resp.StatusCode == http.StatusOK {
 		fmt.Println("The branch has been successfully synced with the upstream repository.")

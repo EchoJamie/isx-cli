@@ -1,14 +1,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/isxcode/isx-cli/common"
 	"github.com/isxcode/isx-cli/git"
 	"github.com/isxcode/isx-cli/github"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -126,39 +123,18 @@ func getLocalBranchName(branchName string) string {
 
 func getGithubBranch(branchNum string, account string) string {
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/"+account+"/"+viper.GetString("current-project.name")+"/branches/"+branchNum, nil)
-
-	req.Header = common.GitHubHeader(common.GetToken())
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("请求失败:", err)
-		os.Exit(1)
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Println("关闭响应体失败:", err)
-		}
-	}(resp.Body)
-
-	// 读取响应体内容
-	_, err = io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("读取响应体失败:", err)
-		os.Exit(1)
-	}
+	projectName := viper.GetString("current-project.name")
+	_, code := github.GetBranchByName(account, projectName, branchNum)
 
 	// 解析结果
-	if resp.StatusCode == http.StatusOK {
+	if code == http.StatusOK {
 		return branchNum
-	} else if resp.StatusCode == http.StatusNotFound {
+	} else if code == http.StatusNotFound {
 		return ""
 	} else {
 		fmt.Println("无法验证token合法性，登录失败")
 		os.Exit(1)
 	}
-
 	return ""
 }
 
@@ -242,57 +218,31 @@ func checkoutUpstreamBranch(path string, branchName string) {
 }
 
 func getGithubIssueBranch(issueNumber string) string {
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/isxcode/"+viper.GetString("current-project.name")+"/issues/"+issueNumber, nil)
-
-	req.Header = common.GitHubHeader(common.GetToken())
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("请求失败:", err)
-		os.Exit(1)
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Println("关闭响应体失败:", err)
-		}
-	}(resp.Body)
-
-	// 读取响应体内容
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("读取响应体失败:", err)
-		os.Exit(1)
-	}
+	projectName := viper.GetString("current-project.name")
+	issue, code := github.GetIssueInfo("isxcode", projectName, issueNumber)
 
 	// 解析结果
-	if resp.StatusCode == http.StatusOK {
-		var content GithubIssue
-		err := json.Unmarshal(body, &content)
+	if code == http.StatusOK {
 
-		if content.State == "closed" {
+		if issue.State == "closed" {
 			fmt.Println("issue已关闭")
 			os.Exit(1)
 		}
 
-		if err != nil {
-			fmt.Println("解析 JSON 失败:", err)
-		}
 		// 使用正则表达式查找匹配项
 		versionStart := "### ReleaseName (发布版本号)\n\n"
 		versionEnd := "\n\n### Scope (范围)"
 
-		startIndex := strings.Index(content.Body, versionStart)
-		endIndex := strings.Index(content.Body, versionEnd)
+		startIndex := strings.Index(issue.Body, versionStart)
+		endIndex := strings.Index(issue.Body, versionEnd)
 
 		if startIndex == -1 || endIndex == -1 {
 			return "main"
 		}
 
-		version := content.Body[startIndex+len(versionStart) : endIndex]
+		version := issue.Body[startIndex+len(versionStart) : endIndex]
 		return version
-	} else if resp.StatusCode == http.StatusNotFound {
+	} else if code == http.StatusNotFound {
 		fmt.Println("issue不存在")
 		os.Exit(1)
 	} else {

@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/isxcode/isx-cli/common"
+	"github.com/isxcode/isx-cli/github"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -108,38 +106,16 @@ func deleteOriginBranch(path string, branchName string) {
 
 func getGithubIssueStatus(issueNumber string) string {
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/isxcode/"+viper.GetString("current-project.name")+"/issues/"+issueNumber, nil)
-
-	req.Header = common.GitHubHeader(common.GetToken())
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("请求失败:", err)
-		os.Exit(1)
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Println("关闭响应体失败:", err)
-		}
-	}(resp.Body)
-
-	// 读取响应体内容
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("读取响应体失败:", err)
-		os.Exit(1)
-	}
+	projectName := viper.GetString("current-project.name")
+	issue, code := github.GetIssueInfo("isxcode", projectName, issueNumber)
 
 	// 解析结果
-	if resp.StatusCode == http.StatusOK {
-		var content GithubIssueStatus
-		json.Unmarshal(body, &content)
-		return content.State
-	} else if resp.StatusCode == http.StatusNotFound {
+	if code == http.StatusOK {
+		return issue.State
+	} else if code == http.StatusNotFound {
 		fmt.Println("issue不存在")
 		os.Exit(1)
-	} else if resp.StatusCode == http.StatusGone {
+	} else if code == http.StatusGone {
 		fmt.Println("issue已删除,请手动删除分支")
 		os.Exit(1)
 	} else {
