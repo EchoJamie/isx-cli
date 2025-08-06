@@ -11,19 +11,19 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(backendCmd)
+	rootCmd.AddCommand(websiteCmd)
 }
 
-var backendCmd = &cobra.Command{
-	Use:   "start",
-	Short: printCommand("isx start", 40) + "| 启动项目",
-	Long:  `isx start`,
+var websiteCmd = &cobra.Command{
+	Use:   "website",
+	Short: printCommand("isx website", 40) + "| 本地启动官网",
+	Long:  `isx website`,
 	Run: func(cmd *cobra.Command, args []string) {
-		backendCmdMain()
+		websiteCmdMain()
 	},
 }
 
-func backendCmdMain() {
+func websiteCmdMain() {
 	// 获取当前项目名称 - 支持新旧配置格式
 	projectName := viper.GetString("now-project")
 	if projectName == "" {
@@ -75,9 +75,9 @@ func backendCmdMain() {
 
 	var gradleCmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		gradleCmd = exec.Command("bash", "-c", "./gradlew.bat backend")
+		gradleCmd = exec.Command("bash", "-c", "./gradlew.bat website")
 	} else {
-		gradleCmd = exec.Command("./gradlew", "backend")
+		gradleCmd = exec.Command("./gradlew", "website")
 	}
 	gradleCmd.Stdout = os.Stdout
 	gradleCmd.Stderr = os.Stderr

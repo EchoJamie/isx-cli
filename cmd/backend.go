@@ -11,19 +11,19 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(backendCmd)
+	rootCmd.AddCommand(serverCmd)
 }
 
-var backendCmd = &cobra.Command{
-	Use:   "start",
-	Short: printCommand("isx start", 40) + "| 启动项目",
-	Long:  `isx start`,
+var serverCmd = &cobra.Command{
+	Use:   "backend",
+	Short: printCommand("isx backend", 40) + "| 本地启动后端",
+	Long:  `isx backend`,
 	Run: func(cmd *cobra.Command, args []string) {
-		backendCmdMain()
+		serverCmdMain()
 	},
 }
 
-func backendCmdMain() {
+func serverCmdMain() {
 	// 获取当前项目名称 - 支持新旧配置格式
 	projectName := viper.GetString("now-project")
 	if projectName == "" {

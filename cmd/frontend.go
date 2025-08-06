@@ -11,19 +11,30 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(backendCmd)
+	rootCmd.AddCommand(webCmd)
+	rootCmd.AddCommand(frontendCmd)
 }
 
-var backendCmd = &cobra.Command{
-	Use:   "start",
-	Short: printCommand("isx start", 40) + "| 启动项目",
-	Long:  `isx start`,
+var frontendCmd = &cobra.Command{
+	Use:   "frontend",
+	Short: printCommand("isx frontend", 40) + "| 本地启动前端",
+	Long:  `isx frontend`,
 	Run: func(cmd *cobra.Command, args []string) {
-		backendCmdMain()
+		webCmdMain()
 	},
 }
 
-func backendCmdMain() {
+var webCmd = &cobra.Command{
+	Use:    "frontend",
+	Short:  printCommand("isx frontend", 40) + "| 本地启动前端服务",
+	Long:   `isx frontend`,
+	Hidden: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		webCmdMain()
+	},
+}
+
+func webCmdMain() {
 	// 获取当前项目名称 - 支持新旧配置格式
 	projectName := viper.GetString("now-project")
 	if projectName == "" {
@@ -75,9 +86,9 @@ func backendCmdMain() {
 
 	var gradleCmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		gradleCmd = exec.Command("bash", "-c", "./gradlew.bat backend")
+		gradleCmd = exec.Command("bash", "-c", "./gradlew.bat frontend")
 	} else {
-		gradleCmd = exec.Command("./gradlew", "backend")
+		gradleCmd = exec.Command("./gradlew", "frontend")
 	}
 	gradleCmd.Stdout = os.Stdout
 	gradleCmd.Stderr = os.Stderr

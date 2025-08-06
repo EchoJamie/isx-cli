@@ -16,7 +16,7 @@ func init() {
 
 var cleanCmd = &cobra.Command{
 	Use:   "clean",
-	Short: printCommand("isx clean", 65) + "| 删除项目缓存",
+	Short: printCommand("isx clean", 40) + "| 清除项目缓存",
 	Long:  `isx clean`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cleanCmdMain()
@@ -24,15 +24,29 @@ var cleanCmd = &cobra.Command{
 }
 
 func cleanCmdMain() {
+	// 获取当前项目名称 - 支持新旧配置格式
+	projectName := viper.GetString("now-project")
+	if projectName == "" {
+		projectName = viper.GetString("current-project.name")
+	}
 
-	projectName := viper.GetString("current-project.name")
+	if projectName == "" {
+		fmt.Println("请先使用【isx choose】选择项目")
+		os.Exit(1)
+	}
+
+	if projectName == "isx-cli" {
+		fmt.Println("该项目" + projectName + "暂不支持")
+		os.Exit(1)
+	}
+
 	var resourcePath string
 	if projectName == "spark-yun" {
 		resourcePath = "~/.zhiqingyun"
-	} else if projectName == "flink-yun" {
-		resourcePath = "~/.zhiliuyun"
+	} else if projectName == "torch-yun" {
+		resourcePath = "~/.zhishuyun"
 	} else {
-		fmt.Println("该项目" + projectName + "暂不支持,请升级isx命令")
+		fmt.Println("该项目" + projectName + "暂不支持")
 		os.Exit(1)
 	}
 
@@ -41,12 +55,15 @@ func cleanCmdMain() {
 	var flag = ""
 	fmt.Scanln(&flag)
 	flag = strings.Trim(flag, " ")
-	flag = strings.ToUpper(flag)
-	if flag != "Y" && flag != "N" {
-		fmt.Println("输入值异常")
+
+	// 转换为小写进行比较，支持大小写不敏感
+	flag = strings.ToLower(flag)
+
+	if flag != "y" && flag != "n" {
+		fmt.Println("输入值异常，请输入 y 或 n")
 		os.Exit(1)
 	}
-	if flag == "N" {
+	if flag == "n" {
 		fmt.Println("删除项目缓存已终止")
 		os.Exit(0)
 	}

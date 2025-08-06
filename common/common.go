@@ -32,9 +32,34 @@ func CurrentWorkDir() string {
 	return dir
 }
 
-var key = []byte("isxcode-20240719")
+// GenerateEncryptionKey 生成16字节的随机加密密钥
+func GenerateEncryptionKey() string {
+	key := make([]byte, 16)
+	_, err := rand.Read(key)
+	if err != nil {
+		fmt.Println("生成加密密钥失败:", err)
+		os.Exit(1)
+	}
+	return hex.EncodeToString(key)
+}
+
+// GetEncryptionKey 从配置文件获取加密密钥
+func GetEncryptionKey() []byte {
+	secret := viper.GetString("user.secret")
+	if secret == "" {
+		fmt.Println("加密密钥不存在，请重新初始化配置")
+		os.Exit(1)
+	}
+	key, err := hex.DecodeString(secret)
+	if err != nil {
+		fmt.Println("解析加密密钥失败:", err)
+		os.Exit(1)
+	}
+	return key
+}
 
 func Encrypt(token string) string {
+	key := GetEncryptionKey()
 	ciphertext, err := encryptAES([]byte(token), key)
 	if err != nil {
 		fmt.Println(err)
@@ -46,7 +71,7 @@ func Encrypt(token string) string {
 func GetToken() string {
 	token := viper.GetString("user.token")
 	if token == "" {
-		fmt.Println("请先登录")
+		fmt.Println("未登录，请先使用【isx login】登录账号")
 		os.Exit(1)
 	}
 	if strings.HasPrefix(token, "ghp_") {
@@ -55,6 +80,7 @@ func GetToken() string {
 		viper.WriteConfig()
 		return token
 	}
+	key := GetEncryptionKey()
 	s, err := decryptAES(token, key)
 	if err != nil {
 		fmt.Println("解密失败...", err)

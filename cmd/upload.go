@@ -4,26 +4,46 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"log"
 	"os"
 	"os/exec"
-	"runtime"
 )
 
 func init() {
-	rootCmd.AddCommand(backendCmd)
+	rootCmd.AddCommand(uploadCmd)
 }
 
-var backendCmd = &cobra.Command{
-	Use:   "start",
-	Short: printCommand("isx start", 40) + "| 启动项目",
-	Long:  `isx start`,
+var uploadCmd = &cobra.Command{
+	Use:   "upload",
+	Short: printCommand("isx upload <target>", 40) + "| 发布本地安装包",
+	Long:  `上传项目到指定仓库，支持：oss、docker、ali`,
 	Run: func(cmd *cobra.Command, args []string) {
-		backendCmdMain()
+		uploadCmdMain(args)
 	},
 }
 
-func backendCmdMain() {
+func uploadCmdMain(args []string) {
+	// 检查参数数量
+	if len(args) != 1 {
+		fmt.Println("使用方式不对，请输入：isx upload <target>")
+		fmt.Println("支持的目标：oss、docker、ali")
+		os.Exit(1)
+	}
+
+	// 验证参数值
+	target := args[0]
+	var gradleTask string
+	switch target {
+	case "oss":
+		gradleTask = "upload-ali-oss"
+	case "docker":
+		gradleTask = "upload-docker-hub"
+	case "ali":
+		gradleTask = "upload-ali-hub"
+	default:
+		fmt.Printf("不支持的目标：%s\n", target)
+		fmt.Println("支持的目标：oss、docker、ali")
+		os.Exit(1)
+	}
 	// 获取当前项目名称 - 支持新旧配置格式
 	projectName := viper.GetString("now-project")
 	if projectName == "" {
@@ -62,9 +82,9 @@ func backendCmdMain() {
 
 	// 如果新配置格式没找到，尝试旧配置格式
 	if projectPath == "" {
-		projectDir := viper.GetString(projectName + ".dir")
-		if projectDir != "" {
-			projectPath = projectDir + "/" + projectName
+		projectPath = viper.GetString(projectName + ".dir")
+		if projectPath != "" {
+			projectPath = projectPath + "/" + projectName
 		}
 	}
 
@@ -73,20 +93,19 @@ func backendCmdMain() {
 		os.Exit(1)
 	}
 
-	var gradleCmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		gradleCmd = exec.Command("bash", "-c", "./gradlew.bat backend")
-	} else {
-		gradleCmd = exec.Command("./gradlew", "backend")
-	}
+	// 执行对应的 gradle 命令
+	fmt.Printf("正在发布 %s 项目到 %s...\n", projectName, target)
+
+	gradleCmd := exec.Command("./gradlew", gradleTask)
+	gradleCmd.Dir = projectPath
 	gradleCmd.Stdout = os.Stdout
 	gradleCmd.Stderr = os.Stderr
-	gradleCmd.Dir = projectPath
+
 	err := gradleCmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("上传到 %s 失败: %v\n", target, err)
 		os.Exit(1)
-	} else {
-		fmt.Println("执行成功")
 	}
+
+	fmt.Printf("上传到 %s 成功！\n", target)
 }

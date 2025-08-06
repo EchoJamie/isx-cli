@@ -26,10 +26,8 @@ var rootCmd = &cobra.Command{
  |  |\    ||  |  |      \     ||     | |  | 
 |____|\___||__|__|       \____||_____||____|
 
-欢迎使用isx-cli脚手架
-代码仓库：https://github.com/isxcode/isx-cli
-
-`,
+至行云-至爻数据开发规范脚手架
+代码仓库：https://github.com/isxcode/isx-cli`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		cmd.DisableFlagParsing = true
 	},
@@ -58,12 +56,67 @@ type Repository struct {
 	Name     string `yaml:"name"`
 }
 
+// SubRepository 新配置格式的子仓库结构
+type SubRepository struct {
+	Name string `mapstructure:"name"`
+	Url  string `mapstructure:"url"`
+}
+
+// GetSubRepositories 获取项目的子仓库列表，支持新旧配置格式
+func GetSubRepositories(projectName string) []Repository {
+	var result []Repository
+
+	// 首先尝试从新配置格式获取 sub-repository
+	type ProjectConfig struct {
+		Name          string          `mapstructure:"name"`
+		SubRepository []SubRepository `mapstructure:"sub-repository"`
+	}
+
+	var projectList []ProjectConfig
+	err := viper.UnmarshalKey("project-list", &projectList)
+	if err == nil {
+		// 在项目列表中查找指定项目
+		for _, project := range projectList {
+			if project.Name == projectName {
+				// 转换新格式到旧格式（保持兼容性）
+				for _, subRepo := range project.SubRepository {
+					result = append(result, Repository{
+						Name: subRepo.Name,
+						Url:  subRepo.Url,
+					})
+				}
+				return result
+			}
+		}
+	}
+
+	// 如果新配置格式没有找到，尝试旧配置格式（向后兼容）
+	var legacySubRepository []Repository
+	viper.UnmarshalKey(projectName+".sub-repository", &legacySubRepository)
+	return legacySubRepository
+}
+
 func init() {
 
 	cobra.OnInitialize(initConfig)
 
+	// 禁用自动生成的 completion 命令
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+
+	// 禁用自动生成的 help 命令
+	rootCmd.SetHelpCommand(&cobra.Command{
+		Use:    "no-help",
+		Hidden: true,
+	})
+
+	// 隐藏使用说明和标志
+	rootCmd.SetUsageTemplate(`{{if .Runnable}}{{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}
+
+`)
+
 	// 解析配置文件
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.isx/isx-config.yml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.isx/config.yml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -76,7 +129,7 @@ func initConfig() {
 	home := common.HomeDir()
 
 	// 初始化配置文件信息
-	viper.SetConfigFile(home + "/.isx/isx-config.yml")
+	viper.SetConfigFile(home + "/.isx/config.yml")
 
 	// 判断配置文件是否存在
 	if err := viper.ReadInConfig(); err != nil {
@@ -92,88 +145,39 @@ func initConfig() {
 		}
 
 		// 判断文件是否存在，不存在则新建
-		_, err = os.Stat(home + "/.isx/isx-config.yml")
+		_, err = os.Stat(home + "/.isx/config.yml")
 		if os.IsNotExist(err) {
 			// 初始化配置
 			viper.SetConfigType("yaml")
-			var yamlExample = []byte(`
-current-project:
-    name: ""
-cache:
-    gradle:
-        dir: ""
-    pnpm:
-        dir: ""
+
+			// 生成随机密钥用于加密
+			encryptionKey := common.GenerateEncryptionKey()
+
+			var yamlExample = []byte(`version: 1.1.2
+project-list:
+    - name: spark-yun
+      describe: 至轻云-超轻量级智能化数据中心
+      repository-url: https://github.com/isxcode/spark-yun.git
+      dir: ""
+      sub-repository:
+        - name: spark-yun-vip
+          url: https://github.com/isxcode/spark-yun-vip.git
+    - name: torch-yun
+      describe: 至数云-超轻量级一体化应用平台
+      repository-url: https://github.com/isxcode/torch-yun.git
+      dir: ""
+      sub-repository:
+        - name: torch-yun-vip
+          url: https://github.com/isxcode/torch-yun-vip.git
+    - name: isx-cli
+      describe: 至行云-至爻数据开发规范脚手架
+      repository-url: https://github.com/isxcode/isx-cli.git
+      dir: ""
+now-project: ""
 user:
     account: ""
     token: ""
-project-list:
-    - spark-yun
-    - flink-yun
-    - echarts-yun
-    - pytorch-yun
-    - lucene-yun
-    - isx-cli
-spark-yun:
-    name: spark-yun
-    describe: 至轻云-打造大数据计算平台
-    dir: ""
-    repository:
-        url: https://github.com/isxcode/spark-yun.git
-        download: no
-    sub-repository:
-        - url: https://github.com/isxcode/spark-yun-vip.git
-          name: spark-yun-vip
-flink-yun:
-    name: flink-yun
-    describe: 至流云-打造流数据分析平台
-    dir: ""
-    repository:
-        url: https://github.com/isxcode/flink-yun.git
-        download: no
-    sub-repository:
-        - url: https://github.com/isxcode/flink-yun-vip.git
-          name: flink-yun-vip
-pytorch-yun:
-    name: pytorch-yun
-    describe: 至慧云-打造智能微模型平台
-    dir: ""
-    repository:
-        url: https://github.com/isxcode/pytorch-yun.git
-        download: no
-    sub-repository:
-        - url: https://github.com/isxcode/pytorch-yun-vip.git
-          name: pytorch-yun-vip
-lucene-yun:
-    name: lucene-yun
-    describe: 至数云-打造元数据管理平台
-    dir: ""
-    repository:
-        url: https://github.com/isxcode/lucene-yun.git
-        download: no
-    sub-repository:
-        - url: https://github.com/isxcode/lucene-yun-vip.git
-          name: lucene-yun-vip
-echarts-yun:
-    name: echarts-yun
-    describe: 至视云-打造数据可视化平台
-    dir: ""
-    repository:
-        url: https://github.com/isxcode/echarts-yun.git
-        download: no
-    sub-repository:
-        - url: https://github.com/isxcode/echarts-yun-vip.git
-          name: echarts-yun-vip
-isx-cli:
-    name: isx-cli
-    describe: 至行云-打造开发规范脚手架
-    dir: ""
-    repository:
-        url: https://github.com/isxcode/isx-cli.git
-        download: no
-    sub-repository:
-version:
-    number: 1.1.0
+    secret: ` + encryptionKey + `
 `)
 			err := viper.ReadConfig(bytes.NewBuffer(yamlExample))
 			if err != nil {
@@ -181,7 +185,7 @@ version:
 				os.Exit(1)
 			}
 			// 持久化配置
-			err = viper.SafeWriteConfigAs(home + "/.isx/isx-config.yml")
+			err = viper.SafeWriteConfigAs(home + "/.isx/config.yml")
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
